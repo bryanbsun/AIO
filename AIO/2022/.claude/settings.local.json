@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(g++ -std=c++17 -O2 -o p2 p2.cpp)",
+      "Bash(./p2)",
+      "Bash(g++ -std=c++17 -O2 -o p3 p3.cpp)",
+      "Bash(./p3)",
+      "Bash(g++ -std=c++17 -O2 -o p4 p4.cpp)",
+      "Bash(./p4)"
+    ]
+  }
+}

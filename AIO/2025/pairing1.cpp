@@ -1,0 +1,76 @@
+#include <bits/stdc++.h>
+using namespace std;
+
+int n, s, d;
+int a[200010];
+int l, h;
+
+int     main(){
+    cin >> n >> d >> s;
+    l = 0; h = n-1;
+
+    for (int i = 0; i < n; i ++)
+        //cin >> a[i];
+        scanf("%d", &a[i]);
+
+    while(1){
+        cout << "[" << l << "," << h << ": ";
+        for (int i = 0; i < n; i ++){
+            cout << a[i] << " ";
+        }
+        cout << "]" << endl;
+        
+        int fd, fs;
+        bool skip = false;
+
+        if (l >= h){
+            cout << "YES" << endl;
+            return 0;
+        }else{
+            if (!a[l]){
+                l ++;
+                skip = true;
+            }
+            if (!a[h]){
+                h --;
+                skip = true;
+            }
+            if (skip) continue;
+        }
+
+        if (a[l] + d > a[h])
+            fd = h + 1;
+        else
+            fd = find(a+l+1, a+h+1, a[l] + d) - a;
+        
+        if (a[l] >= s)
+            fs = h + 1;
+        else
+            fs = find(a+l+1, a+h+1, s - a[l]) - a;
+        cout << "fd= " << fd << ", fs = " << fs << endl;
+
+        if (fd > h && fs > h){
+            cout << "NO" << endl;
+            return 0;
+        }else if (fs <= h && fd > h){
+            a[l] = 0;
+            a[fs] = 0;
+        }else if (fs > h && fd <= h){
+            a[l] = 0;
+            a[fd] = 0;
+        }else{
+            if (a[l] + a[h] == s){
+                a[l] = 0;
+                a[h] = 0;
+            }else if ((a[h] > d) && (fd = find(a+l,a+h,a[h]-d) - a) < h){
+                a[h] = 0;
+                a[fd] = 0;
+            }else{
+                cout << "NO" << endl;
+                return 0;
+            }
+        }
+
+    }   
+    return 0;
+}
