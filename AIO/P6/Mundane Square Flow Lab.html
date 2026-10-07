@@ -1,0 +1,290 @@
+<title>Mundane Square Flow Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: control strip on top, grid (left) and flow network (right) side by side, verdict bar beneath; stacks on phones. */
+:root{
+  --bg:#F6F8F8; --panel:#FFFFFF; --ink:#1F2328; --muted:#5E6A70; --line:#D5DDDE;
+  --teal:#287673; --edge:#9FB9B8; --row:#6A5ACD; --col:#C8373A; --pin:#D9890A; --pin-soft:#FCEFD6;
+  --good:#1E7F4F; --good-soft:#E3F3EA; --bad:#B4322F; --bad-soft:#FBE7E5; --label-bg:#FFFFFF;
+  --f-body:'Atkinson Hyperlegible', 'Segoe UI', Arial, sans-serif;
+  --f-num:'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121718; --panel:#1A2122; --ink:#E6ECEC; --muted:#93A1A4; --line:#2E3A3C;
+  --teal:#5FB3AE; --edge:#4A6664; --row:#9C90F0; --col:#EE6A62; --pin:#F2AA35; --pin-soft:#3A2E17;
+  --good:#5CC48E; --good-soft:#173326; --bad:#F07B72; --bad-soft:#3A1D1B; --label-bg:#1A2122; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121718; --panel:#1A2122; --ink:#E6ECEC; --muted:#93A1A4; --line:#2E3A3C;
+  --teal:#5FB3AE; --edge:#4A6664; --row:#9C90F0; --col:#EE6A62; --pin:#F2AA35; --pin-soft:#3A2E17;
+  --good:#5CC48E; --good-soft:#173326; --bad:#F07B72; --bad-soft:#3A1D1B; --label-bg:#1A2122; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:28px 40px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);font-weight:700}
+h1{margin:0;font-size:clamp(26px,3.4vw,38px);line-height:1.15;text-wrap:balance}
+.lede{margin:0;max-width:74ch;color:var(--muted)}
+.controls{display:flex;flex-wrap:wrap;gap:14px 26px;align-items:end;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:13px;color:var(--muted)}
+.field .ins{display:flex;gap:6px}
+.field input{width:52px;font:700 16px var(--f-num);padding:6px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);text-align:center}
+.field.r input{border-color:color-mix(in srgb,var(--row) 45%,var(--line))}
+.field.c input{border-color:color-mix(in srgb,var(--col) 45%,var(--line))}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
+button{font:inherit;cursor:pointer}
+.btn{font-size:14px;padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.btn:hover{border-color:var(--teal)}
+.btn.primary{background:var(--teal);border-color:var(--teal);color:var(--panel)}
+:focus-visible{outline:3px solid var(--pin);outline-offset:2px}
+.main{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.main{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card h2{margin:0;font-size:17px}
+.hint{margin:0;font-size:14px;color:var(--muted)}
+table.grid{border-collapse:collapse;font-family:var(--f-num)}
+.grid th{font:700 13px var(--f-body);padding:4px 6px}
+.grid th.rh{color:var(--row);text-align:right;white-space:nowrap}
+.grid th.ch{color:var(--col)}
+.grid td.cell{border:1.5px solid var(--ink);width:78px;height:74px;text-align:center;padding:0;position:relative;background:var(--panel)}
+.grid td.cell.pinned{background:var(--pin-soft);outline:3px solid var(--pin);outline-offset:-3px}
+.grid td.cell.hot{box-shadow:inset 0 0 0 3px var(--teal)}
+.cv{font-size:26px;font-weight:700;display:block;line-height:1;margin-top:8px}
+.pinned .cv{color:var(--pin)}
+.step{display:flex;justify-content:center;gap:4px;margin-top:6px}
+.step button{width:24px;height:22px;border-radius:5px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:700 14px var(--f-num);line-height:1;padding:0}
+.step button:disabled{opacity:.3;cursor:not-allowed}
+.unpin{position:absolute;top:2px;right:3px;border:0;background:none;color:var(--pin);font-size:11px;padding:0 2px;font-family:var(--f-body)}
+.sum{font:700 15px var(--f-num);padding:0 8px;white-space:nowrap}
+.sum small{font:400 12px var(--f-body);color:var(--muted);display:block}
+.sum.ok{color:var(--good)} .sum.short{color:var(--bad)}
+.netbox{overflow-x:auto}
+svg{display:block;width:100%;height:auto;min-width:560px}
+.e{fill:none;transition:stroke-width .45s ease,stroke .3s ease}
+.lbl rect{fill:var(--label-bg)}
+.lbl text{font:700 15px var(--f-num);dominant-baseline:central;text-anchor:middle}
+.lbl.flash rect{fill:var(--pin-soft);transition:fill 1.2s ease}
+.node text{font:700 17px var(--f-body);fill:#fff;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.mid{cursor:pointer}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:22px;height:0;border-top:4px solid}
+.verdict{border-radius:10px;padding:14px 18px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;border:1px solid}
+.verdict.ok{background:var(--good-soft);border-color:var(--good)}
+.verdict.bad{background:var(--bad-soft);border-color:var(--bad)}
+.big{font:700 30px var(--f-num)}
+.ok .big{color:var(--good)} .bad .big{color:var(--bad)}
+.vtext{flex:1;min-width:240px;display:flex;flex-direction:column;gap:2px}
+.vtext strong{font-size:17px}
+.meter{flex-basis:100%;height:10px;border-radius:999px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;transition:width .45s ease}
+.ok .meter i{background:var(--good)} .bad .meter i{background:var(--bad)}
+details{font-size:15px;color:var(--muted);max-width:90ch}
+summary{cursor:pointer;color:var(--ink);font-weight:700}
+@media (prefers-reduced-motion:reduce){.e,.meter i,.lbl.flash rect{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">AIO 2026 P6 · Mundane Square · flow lab</span>
+    <h1>Fix some cells by hand, and watch the best possible flow react</h1>
+    <p class="lede">Each cell (i, j) is the flow on the edge row i → column j. Use − and + on a cell to fix it at a value of your choice (it turns orange). The page then finds the largest flow it can still push with the cells you have not fixed, so every other edge may change. A grid exists only when the flow reaches ΣR = ΣC.</p>
+  </header>
+
+  <section class="controls" aria-label="Problem data">
+    <div class="field"><label for="k">K (max per cell)</label><div class="ins"><input id="k" type="number" min="0" max="9" value="4"></div></div>
+    <div class="field r"><label for="r0">R (row sums)</label><div class="ins"><input id="r0" type="number" min="0" max="27" value="6"><input id="r1" type="number" min="0" max="27" value="8"><input id="r2" type="number" min="0" max="27" value="3"></div></div>
+    <div class="field c"><label for="c0">C (column sums)</label><div class="ins"><input id="c0" type="number" min="0" max="27" value="5"><input id="c1" type="number" min="0" max="27" value="5"><input id="c2" type="number" min="0" max="27" value="7"></div></div>
+    <div class="presets" role="group" aria-label="Scenarios">
+      <button class="btn primary" id="p-free">Release all cells</button>
+      <button class="btn" id="p-greedy">Greedy answer</button>
+      <button class="btn" id="p-starve">Starve column 3</button>
+      <button class="btn" id="p-waste">Two innocent-looking cells</button>
+    </div>
+  </section>
+
+  <div class="main">
+    <section class="card" aria-label="Grid">
+      <h2>The grid = flows on the middle edges</h2>
+      <table class="grid" id="grid"></table>
+      <p class="hint">Orange cells are fixed by you; ✕ releases one. White cells are chosen by the max-flow search. − and + stop at the value that would overflow K, the row's R or the column's C.</p>
+    </section>
+    <section class="card" aria-label="Flow network">
+      <h2>The flow network</h2>
+      <div class="netbox"><svg id="net" viewBox="0 0 900 470" role="img" aria-label="Flow network: source, three row nodes, three column nodes, sink"></svg></div>
+      <div class="legend">
+        <span><i class="sw" style="border-color:var(--row)"></i>S → row i, capacity R[i]</span>
+        <span><i class="sw" style="border-color:var(--teal)"></i>row → column, capacity K</span>
+        <span><i class="sw" style="border-color:var(--pin)"></i>fixed by you</span>
+        <span><i class="sw" style="border-color:var(--col)"></i>column j → T, capacity C[j]</span>
+        <span>labels: flow / capacity · line width = flow</span>
+      </div>
+    </section>
+  </div>
+
+  <section class="verdict" id="verdict" aria-live="polite"></section>
+
+  <details>
+    <summary>How the page computes the flow</summary>
+    <p>Fixed cells use up part of their row's R and their column's C. The page subtracts them, then runs Edmonds–Karp (shortest augmenting paths) on the remaining network: S → row (what is left of R), row → column for every unfixed cell (capacity K), column → T (what is left of C). The total shown is your fixed flow plus that maximum. If the total is below ΣR, the rows or columns marked "short" cannot be filled, whatever the free cells do.</p>
+  </details>
+</div>
+
+<script>
+(function(){
+const N=3;
+let K=4,R=[6,8,3],C=[5,5,7];
+let pinned=new Map();           // "i,j" -> value
+let flow=[[0,0,0],[0,0,0],[0,0,0]];
+let prev=null, hover=null;
+const $=id=>document.getElementById(id);
+const key=(i,j)=>i+','+j;
+
+function readInputs(){
+  const v=id=>{const n=parseInt($(id).value,10);return Number.isFinite(n)&&n>=0?Math.min(n,99):0;};
+  K=v('k');R=[v('r0'),v('r1'),v('r2')];C=[v('c0'),v('c1'),v('c2')];
+  // keep fixed cells legal after data changes
+  for(const [k2,val] of pinned){pinned.set(k2,Math.min(val,K));}
+  for(let pass=0;pass<2;pass++)for(const [k2] of pinned){const [i,j]=k2.split(',').map(Number);pinned.set(k2,Math.min(pinned.get(k2),limit(i,j)));}
+}
+function pinRow(i,skip){let s=0;for(const [k2,v] of pinned){const [a,b]=k2.split(',').map(Number);if(a===i&&b!==skip)s+=v;}return s;}
+function pinCol(j,skip){let s=0;for(const [k2,v] of pinned){const [a,b]=k2.split(',').map(Number);if(b===j&&a!==skip)s+=v;}return s;}
+function limit(i,j){return Math.max(0,Math.min(K,R[i]-pinRow(i,j),C[j]-pinCol(j,i)));}
+
+// Edmonds-Karp on S=0, rows 1..3, cols 4..6, T=7
+function solve(){
+  const V=8,cap=[...Array(V)].map(()=>Array(V).fill(0)),f=[...Array(V)].map(()=>Array(V).fill(0));
+  for(let i=0;i<N;i++){cap[0][1+i]=Math.max(0,R[i]-pinRow(i,-1));}
+  for(let j=0;j<N;j++){cap[4+j][7]=Math.max(0,C[j]-pinCol(j,-1));}
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++) if(!pinned.has(key(i,j))) cap[1+i][4+j]=K;
+  let extra=0;
+  for(;;){
+    const par=Array(V).fill(-1);par[0]=0;const q=[0];
+    while(q.length&&par[7]<0){const u=q.shift();for(let v=0;v<V;v++){if(par[v]<0&&cap[u][v]-f[u][v]>0){par[v]=u;q.push(v);}}}
+    if(par[7]<0)break;
+    let b=Infinity;for(let v=7;v!==0;v=par[v])b=Math.min(b,cap[par[v]][v]-f[par[v]][v]);
+    for(let v=7;v!==0;v=par[v]){f[par[v]][v]+=b;f[v][par[v]]-=b;}
+    extra+=b;
+  }
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++) flow[i][j]=pinned.has(key(i,j))?pinned.get(key(i,j)):f[1+i][4+j];
+}
+
+// ---------- grid
+function drawGrid(){
+  const g=$('grid');let h='<tr><th></th>';
+  for(let j=0;j<N;j++)h+=`<th class="ch">col ${j+1}</th>`;h+='<th></th></tr>';
+  for(let i=0;i<N;i++){
+    h+=`<tr><th class="rh">row ${i+1}</th>`;
+    for(let j=0;j<N;j++){
+      const p=pinned.has(key(i,j)),v=flow[i][j],lim=limit(i,j);
+      h+=`<td class="cell${p?' pinned':''}${hover===key(i,j)?' hot':''}" data-k="${key(i,j)}">`+
+         (p?`<button class="unpin" data-act="free" data-k="${key(i,j)}" aria-label="Release cell ${i+1},${j+1}" title="Release">✕</button>`:'')+
+         `<span class="cv">${v}</span><span class="step">`+
+         `<button data-act="dec" data-k="${key(i,j)}" aria-label="Decrease cell ${i+1},${j+1}" ${v<=0?'disabled':''}>−</button>`+
+         `<button data-act="inc" data-k="${key(i,j)}" aria-label="Increase cell ${i+1},${j+1}" ${v>=lim?'disabled':''}>+</button></span></td>`;
+    }
+    const s=flow[i].reduce((a,b)=>a+b,0);
+    h+=`<td class="sum ${s===R[i]?'ok':'short'}">${s} / ${R[i]}<small>${s===R[i]?'row full':'short '+(R[i]-s)}</small></td></tr>`;
+  }
+  h+='<tr><th></th>';
+  for(let j=0;j<N;j++){const s=flow.reduce((a,r)=>a+r[j],0);h+=`<td class="sum ${s===C[j]?'ok':'short'}" style="text-align:center">${s} / ${C[j]}<small>${s===C[j]?'column full':'short '+(C[j]-s)}</small></td>`;}
+  h+='<td></td></tr>';g.innerHTML=h;
+}
+
+// ---------- network
+const P={S:[45,235],T:[855,235]};
+const ys=[80,235,390];
+for(let i=0;i<N;i++){P['r'+i]=[270,ys[i]];P['c'+i]=[630,ys[i]];}
+const NS='http://www.w3.org/2000/svg';
+function shorten(a,b,ra,rb){const dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy);return [a[0]+dx*ra/L,a[1]+dy*ra/L,b[0]-dx*rb/L,b[1]-dy*rb/L];}
+function width(v){return 1.4+v*1.35;}
+function label(x,y,txt,col,id,flash){
+  const w=txt.length*9.4+12;
+  return `<g class="lbl${flash?' flash':''}" id="${id}"><rect x="${x-w/2}" y="${y-12}" width="${w}" height="24" rx="6"/><text x="${x}" y="${y+1}" fill="${col}">${txt}</text></g>`;
+}
+function drawNet(){
+  const sv=$('net');let s=`<defs>`;
+  for(const [n,c] of [['row','var(--row)'],['col','var(--col)'],['mid','var(--teal)'],['pin','var(--pin)'],['zero','var(--edge)']])
+    s+=`<marker id="m-${n}" viewBox="0 0 10 10" refX="8" refY="5" markerUnits="userSpaceOnUse" markerWidth="15" markerHeight="15" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="${c}"/></marker>`;
+  s+='</defs>';
+  const rowOut=flow.map(r=>r.reduce((a,b)=>a+b,0)),colIn=[0,1,2].map(j=>flow.reduce((a,r)=>a+r[j],0));
+  let labels='';
+  const changed=(id,v)=>prev&&prev[id]!==undefined&&prev[id]!==v;
+  const now={};
+  // middle edges first (under)
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+    const p=pinned.has(key(i,j)),v=flow[i][j],[x1,y1,x2,y2]=shorten(P['r'+i],P['c'+j],32,36);
+    const col=p?'var(--pin)':(v>0?'var(--teal)':'var(--edge)'),mk=p?'pin':(v>0?'mid':'zero');
+    const hot=hover===key(i,j);
+    s+=`<line class="e mid" data-k="${key(i,j)}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" style="stroke-width:${width(v)+(hot?2:0)}px" ${v===0&&!p?'stroke-dasharray="6 6"':''} marker-end="url(#m-${mk})"/>`;
+    s+=`<line class="mid" data-k="${key(i,j)}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="transparent" stroke-width="18"/>`;
+    const t=.2,lx=P['r'+i][0]+t*(P['c'+j][0]-P['r'+i][0]),ly=P['r'+i][1]+t*(P['c'+j][1]-P['r'+i][1]);
+    const id='m'+i+j;now[id]=v;
+    labels+=label(lx+18,ly,`${v}/${K}`,p?'var(--pin)':'var(--teal)',id,changed(id,v));
+  }
+  for(let i=0;i<N;i++){
+    const v=rowOut[i],[x1,y1,x2,y2]=shorten(P.S,P['r'+i],32,36);
+    s+=`<line class="e" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--row)" style="stroke-width:${width(v)}px" marker-end="url(#m-row)"/>`;
+    const id='s'+i;now[id]=v;
+    labels+=label((P.S[0]+P['r'+i][0])/2,(P.S[1]+P['r'+i][1])/2,`${v}/${R[i]}`,v<R[i]?'var(--bad)':'var(--row)',id,changed(id,v));
+  }
+  for(let j=0;j<N;j++){
+    const v=colIn[j],[x1,y1,x2,y2]=shorten(P['c'+j],P.T,32,36);
+    s+=`<line class="e" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--col)" style="stroke-width:${width(v)}px" marker-end="url(#m-col)"/>`;
+    const id='t'+j;now[id]=v;
+    labels+=label((P['c'+j][0]+P.T[0])/2,(P['c'+j][1]+P.T[1])/2,`${v}/${C[j]}`,v<C[j]?'var(--bad)':'var(--col)',id,changed(id,v));
+  }
+  const node=(n,txt,fill)=>`<g class="node"><circle cx="${P[n][0]}" cy="${P[n][1]}" r="30" fill="${fill}"/><text x="${P[n][0]}" y="${P[n][1]}">${txt}</text></g>`;
+  s+=labels+node('S','S','var(--ink)')+node('T','T','var(--ink)');
+  for(let i=0;i<N;i++)s+=node('r'+i,'r'+(i+1),'var(--row)')+node('c'+i,'c'+(i+1),'var(--col)');
+  s+=`<text x="45" y="292" text-anchor="middle" fill="var(--muted)" font-size="14">source</text><text x="855" y="292" text-anchor="middle" fill="var(--muted)" font-size="14">sink</text>`;
+  sv.innerHTML=s;
+  // node text colour must stay readable on dark ink node in dark theme
+  sv.querySelectorAll('.node text').forEach((t,ix)=>{if(ix<2)t.setAttribute('fill','var(--bg)');});
+  prev=now;
+  setTimeout(()=>sv.querySelectorAll('.lbl.flash').forEach(g=>g.classList.remove('flash')),60);
+}
+
+function drawVerdict(){
+  const total=flow.flat().reduce((a,b)=>a+b,0),SR=R.reduce((a,b)=>a+b,0),SC=C.reduce((a,b)=>a+b,0);
+  const target=Math.min(SR,SC),ok=SR===SC&&total===SR;
+  const fixed=[...pinned.values()].reduce((a,b)=>a+b,0);
+  const shortR=R.map((r,i)=>[i,r-flow[i].reduce((a,b)=>a+b,0)]).filter(x=>x[1]>0);
+  const shortC=C.map((c,j)=>[j,c-flow.reduce((a,r)=>a+r[j],0)]).filter(x=>x[1]>0);
+  let msg,why='';
+  if(SR!==SC){msg='ΣR ≠ ΣC, so no grid can exist';why=`ΣR = ${SR} but ΣC = ${SC}. The flow can never fill both sides.`;}
+  else if(ok){msg=pinned.size?'Still a valid grid':'A valid grid exists';why=pinned.size?`Your ${pinned.size} fixed cell${pinned.size>1?'s':''} (carrying ${fixed}) leave room for the free cells to fill every row and column.`:'Every S-edge and every T-edge is full. Read the grid off the middle edges.';}
+  else{msg='Not a valid grid with these fixed cells';
+    const parts=[...shortR.map(([i,d])=>`row ${i+1} short ${d}`),...shortC.map(([j,d])=>`column ${j+1} short ${d}`)];
+    why=`Best possible flow is ${total} of ${SR}: ${parts.join(', ')}. No choice of the free cells fixes this; release or change a fixed cell.`;}
+  $('verdict').className='verdict '+(ok?'ok':'bad');
+  $('verdict').innerHTML=`<span class="big">${total} / ${target}</span><div class="vtext"><strong>${msg}</strong><span>${why}</span></div><div class="meter" aria-hidden="true"><i style="width:${target?100*total/target:0}%"></i></div>`;
+}
+
+function render(){solve();drawGrid();drawNet();drawVerdict();}
+
+// ---------- events
+$('grid').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;const k2=b.dataset.k;const [i,j]=k2.split(',').map(Number);
+  if(b.dataset.act==='free'){pinned.delete(k2);}
+  else{const cur=flow[i][j];const nv=b.dataset.act==='inc'?Math.min(cur+1,limit(i,j)):Math.max(cur-1,0);pinned.set(k2,nv);}
+  render();
+  const again=document.querySelector(`#grid button[data-k="${k2}"][data-act="${b.dataset.act}"]`);if(again&&!again.disabled)again.focus();
+});
+function setHover(k2){if(hover===k2)return;hover=k2;drawGrid();drawNet();}
+$('grid').addEventListener('mouseover',e=>{const td=e.target.closest('td.cell');setHover(td?td.dataset.k:null);});
+$('grid').addEventListener('mouseleave',()=>setHover(null));
+$('net').addEventListener('mouseover',e=>{const l=e.target.closest('.mid');setHover(l?l.dataset.k:null);});
+$('net').addEventListener('mouseleave',()=>setHover(null));
+$('net').addEventListener('click',e=>{const l=e.target.closest('.mid');if(!l)return;const k2=l.dataset.k;const [i,j]=k2.split(',').map(Number);
+  if(pinned.has(k2))pinned.delete(k2);else pinned.set(k2,flow[i][j]);render();});
+['k','r0','r1','r2','c0','c1','c2'].forEach(id=>$(id).addEventListener('input',()=>{readInputs();render();}));
+function setData(k,r,c){$('k').value=k;r.forEach((v,i)=>$('r'+i).value=v);c.forEach((v,j)=>$('c'+j).value=v);readInputs();}
+$('p-free').onclick=()=>{pinned.clear();render();};
+$('p-greedy').onclick=()=>{setData(4,[6,8,3],[5,5,7]);pinned=new Map([[0,0,2],[0,1,1],[0,2,3],[1,0,2],[1,1,3],[1,2,3],[2,0,1],[2,1,1],[2,2,1]].map(([i,j,v])=>[key(i,j),v]));render();};
+$('p-starve').onclick=()=>{setData(4,[6,8,3],[5,5,7]);pinned=new Map([[key(0,2),0],[key(1,2),0]]);render();};
+$('p-waste').onclick=()=>{setData(4,[6,8,3],[5,5,7]);pinned=new Map([[key(0,0),4],[key(1,1),0]]);render();};
+render();
+})();
+</script>
