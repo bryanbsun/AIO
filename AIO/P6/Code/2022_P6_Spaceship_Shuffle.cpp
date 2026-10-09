@@ -1,5 +1,5 @@
 // AIO 2022 P6 - Spaceship Shuffle
-// 方法：Prefix Sum + 中位数（median）
+// Method: Prefix Sum + median
 #include <bits/stdc++.h>
 using namespace std;
 
@@ -13,13 +13,13 @@ int main(){
     for (int i = 1; i <= n; i ++)
         cin >> b[i];
 
-    // Prefix Sum：p[i] 是边 i -> i+1 的流量（先不考虑环）
+    // Prefix Sum: p[i] is the flow on edge i -> i+1 (ignoring the cycle for now)
     for (int i = 1; i <= n; i ++){
         p[i] = p[i-1] + a[i] - b[i];
         q[i] = p[i];
     }
 
-    // 花费 = sum |p[i] - med|，med 取中位数最小
+    // cost = sum |p[i] - med|, minimised when med is the median
     sort(q + 1, q + n + 1);
     long long med = q[(n + 1) / 2];
 

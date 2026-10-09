@@ -1,14 +1,14 @@
 // AIO 2023 P6 - Yet Another Lights Problem
-// 方法：奇偶性（Parity）构造：x[i][j] = t[i][j] ^ rw[i] ^ cl[j]
+// Method: Parity construction: x[i][j] = t[i][j] ^ rw[i] ^ cl[j]
 #include <bits/stdc++.h>
 using namespace std;
 
 int R, C;
 char s[210];
-int t[210][210], x[210][210];   // t = 1：这盏灯要翻奇数次；x = 1：在这里 cross-flip
-int tr[210], tc[210];           // 每行、每列 t 的奇偶
-int rw[210], cl[210];           // 每行、每列操作次数的奇偶
-int rs[210], cs[210];           // 构造出的 x 每行、每列的奇偶（用来验证）
+int t[210][210], x[210][210];   // t = 1: this light must flip an odd number of times; x = 1: cross-flip here
+int tr[210], tc[210];           // parity of t in each row / column
+int rw[210], cl[210];           // parity of the number of operations in each row / column
+int rs[210], cs[210];           // parity of the constructed x in each row / column (for verification)
 
 int main(){
     cin >> R >> C;
@@ -21,9 +21,9 @@ int main(){
         }
     }
 
-    // 枚举所有操作的总奇偶 S
+    // try both values of S, the parity of the total number of operations
     for (int S = 0; S < 2; S ++){
-        // C 偶数：rw[i] 唯一确定；C 奇数：rw 自由，只要总奇偶 = S
+        // C even: rw[i] is fixed; C odd: rw is free as long as the total parity = S
         for (int i = 1; i <= R; i ++)
             rw[i] = (C % 2 == 0) ? (tr[i] ^ S) : 0;
         if (C % 2 == 1)
@@ -33,7 +33,7 @@ int main(){
         if (R % 2 == 1)
             cl[1] = S;
 
-        // 按公式构造 x
+        // build x from the formula
         memset(rs, 0, sizeof(rs));
         memset(cs, 0, sizeof(cs));
         for (int i = 1; i <= R; i ++)
@@ -43,7 +43,7 @@ int main(){
                 cs[j] ^= x[i][j];
             }
 
-        // 验证：每盏灯翻转的奇偶 = rs[i] ^ cs[j] ^ x[i][j]，必须等于 t[i][j]
+        // verify: each light's flip parity = rs[i] ^ cs[j] ^ x[i][j], which must equal t[i][j]
         bool ok = true;
         for (int i = 1; i <= R; i ++)
             for (int j = 1; j <= C; j ++)
@@ -60,7 +60,7 @@ int main(){
         for (int i = 1; i <= R; i ++)
             for (int j = 1; j <= C; j ++)
                 if (x[i][j])
-                    cout << i - 1 << " " << j - 1 << endl;   // 题目的行列从 0 开始
+                    cout << i - 1 << " " << j - 1 << endl;   // the problem numbers rows and columns from 0
         return 0;
     }
 

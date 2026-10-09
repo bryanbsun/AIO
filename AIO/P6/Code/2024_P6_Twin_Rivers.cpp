@@ -1,29 +1,29 @@
 // AIO 2024 P6 - Atlantis III: Twin Rivers
-// 方法：Binary Search（找最近的桥）+ 二阶差分 / 两次 Prefix Sum
+// Method: Binary Search (nearest bridges) + second differences / two Prefix Sums
 //
-// 思路：
-//   新桥建在第 w 条河的位置 p。对每个行程，把"它的代价"看成 p 的函数 f(p)。
-//   f(p) 是一条折线，斜率只有 -2、0、+2，拐点只有几个。
-//   所有行程的 f 加起来就是总代价。我们不逐个 p 去加，
-//   而是只在拐点 q 处记下二阶差分 d2[q]，最后用两次 prefix sum 还原每个 p 的总代价。
+// Idea:
+//   The new bridge goes on river w at position p. For each trip, treat "its cost" as a function f(p).
+//   f(p) is a broken line with slopes -2, 0, +2 only, and just a few turning points.
+//   The total cost is the sum of all trips' f. Instead of adding them at every p,
+//   we record the second difference d2[q] only at the turning points q, then rebuild the total cost at every p with two prefix sums.
 #include <bits/stdc++.h>
 using namespace std;
 
-const long long INF = 1e13;         // 表示"走不通"
+const long long INF = 1e13;         // means "no route"
 
 int n, L, T;
-vector<long long> br[3];            // br[1]、br[2]：两条河上已有的桥（排序后从小到大）
-vector<long long> d2[3];            // 二阶差分：[1] 新桥建在 River 1，[2] 建在 River 2
-vector<long long> tot[3];           // 还原出的总代价：tot[w][p]
+vector<long long> br[3];            // br[1], br[2]: existing bridges on each river (sorted ascending)
+vector<long long> d2[3];            // second differences: [1] new bridge on River 1, [2] on River 2
+vector<long long> tot[3];           // rebuilt total cost: tot[w][p]
 
-// 当前正在处理的行程
-long long X;                        // 出发位置
-int S;                              // 目的地：Strip 2 或 Strip 3
-long long u1, w1;                   // River 1 上 X 左边、右边最近的桥（没有则为 -1）
-long long u2, w2;                   // River 2 上 X 左边、右边最近的桥（没有则为 -1）
-long long oldCost;                  // 不建新桥时的最短路程
+// the trip being processed right now
+long long X;                        // starting position
+int S;                              // destination: Strip 2 or Strip 3
+long long u1, w1;                   // nearest bridges left / right of X on River 1 (-1 if none)
+long long u2, w2;                   // nearest bridges left / right of X on River 2 (-1 if none)
+long long oldCost;                  // shortest trip without the new bridge
 
-// 二分：第 r 条河上 <= v 的最大桥，没有返回 -1
+// binary search: largest bridge <= v on river r, -1 if none
 long long pred(int r, long long v){
     int l = 0, h = (int)br[r].size() - 1;
     while (l <= h){
@@ -38,7 +38,7 @@ long long pred(int r, long long v){
     return -1;
 }
 
-// 二分：第 r 条河上 >= v 的最小桥，没有返回 -1
+// binary search: smallest bridge >= v on river r, -1 if none
 long long succ(int r, long long v){
     int l = 0, h = (int)br[r].size() - 1;
     while (l <= h){
@@ -53,15 +53,15 @@ long long succ(int r, long long v){
     return -1;
 }
 
-// 去 Strip 2：走到 River 1 上的桥 a，过桥，再走回 X
+// to Strip 2: walk to bridge a on River 1, cross, walk back to X
 long long way2(long long a){
     if (a < 0)
         return INF;
     return 1 + 2 * abs(X - a);
 }
 
-// 去 Strip 3：用 River 1 上的桥 a 和 River 2 上的桥 b
-// 要走遍 X、a、b 覆盖的那一段，来回各一次，再加两座桥
+// to Strip 3: use bridge a on River 1 and bridge b on River 2
+// walk the stretch covering X, a and b twice (there and back), plus two bridges
 long long way3(long long a, long long b){
     if (a < 0 || b < 0)
         return INF;
@@ -70,28 +70,28 @@ long long way3(long long a, long long b){
     return 2 + 2 * (hi - lo);
 }
 
-// f(w, p)：新桥建在第 w 条河的位置 p 时，当前行程的最短路程
+// f(w, p): shortest length of the current trip if the new bridge is at p on river w
 long long f(int w, long long p){
     long long c = oldCost;
-    if (S == 2 && w == 1)                               // 新桥当 River 1 的桥
+    if (S == 2 && w == 1)                               // new bridge used as the River 1 bridge
         c = min(c, way2(p));
-    if (S == 3 && w == 1)                               // 新桥当 River 1 的桥
+    if (S == 3 && w == 1)                               // new bridge used as the River 1 bridge
         c = min(c, min(way3(p, u2), way3(p, w2)));
-    if (S == 3 && w == 2)                               // 新桥当 River 2 的桥
+    if (S == 3 && w == 2)                               // new bridge used as the River 2 bridge
         c = min(c, min(way3(u1, p), way3(w1, p)));
-    // S == 2 且 w == 2：新桥在 River 2，去 Strip 2 用不上
+    // S == 2 and w == 2: a bridge on River 2 does not help a trip to Strip 2
     return c;
 }
 
-// 把当前行程的 f(w, p) 加进第 w 个累加器
+// add the current trip's f(w, p) into accumulator w
 void addTrip(int w){
-    // 1. 起点的两个值，还原时要用
+    // 1. the first two values, needed for the rebuild
     tot[w][0] += f(w, 0);
     if (L >= 1)
         tot[w][1] += f(w, 1);
 
-    // 2. 找候选拐点：关键点 key，以及关键点 ± k（f 碰到 oldCost 的地方）
-    long long a, b;                                     // 另一条河上 X 左右最近的桥
+    // 2. candidate turning points: the key points, and each key point +/- k (where f reaches oldCost)
+    long long a, b;                                     // nearest bridges left / right of X on the OTHER river
     if (w == 1){
         a = u2;
         b = w2;
@@ -107,7 +107,7 @@ void addTrip(int w){
         if (b >= 0)
             key.push_back(b);
         if (a >= 0 && b >= 0)
-            key.push_back(a + b - X);                   // 两种走法一样长的位置
+            key.push_back(a + b - X);                   // where the two routes are equally long
     }
     long long k = (oldCost - (S - 1)) / 2;              // oldCost = (S - 1) + 2k
 
@@ -118,9 +118,9 @@ void addTrip(int w){
         cand.push_back(key[i] + k);
     }
     sort(cand.begin(), cand.end());
-    cand.erase(unique(cand.begin(), cand.end()), cand.end());   // 去重
+    cand.erase(unique(cand.begin(), cand.end()), cand.end());   // remove duplicates
 
-    // 3. 在每个候选点 q 记下二阶差分（不是拐点的地方，算出来正好是 0）
+    // 3. record the second difference at each candidate q (it is exactly 0 where f does not bend)
     for (int i = 0; i < (int)cand.size(); i ++){
         long long q = cand[i];
         if (q < 1 || q > L - 1)
@@ -129,7 +129,7 @@ void addTrip(int w){
     }
 }
 
-// 两次 prefix sum：由二阶差分还原每个 p 的总代价
+// two prefix sums: rebuild the total cost at every p from the second differences
 void build(int w){
     for (int q = 1; q + 1 <= L; q ++)
         tot[w][q+1] = 2 * tot[w][q] - tot[w][q-1] + d2[w][q];
@@ -157,13 +157,13 @@ int main(){
         if (S == 3)
             hasS3 = true;
 
-        // 用二分找两条河上 X 左右最近的桥
+        // binary search: nearest bridges left / right of X on both rivers
         u1 = pred(1, X);
         w1 = succ(1, X);
         u2 = pred(2, X);
         w2 = succ(2, X);
 
-        // 不建新桥时的最短路程
+        // shortest trip without the new bridge
         if (S == 2)
             oldCost = min(way2(u1), way2(w1));
         else
@@ -179,7 +179,7 @@ int main(){
 
     long long ans = -1;
     for (int p = 0; p <= L; p ++){
-        // 建在 River 1 时，去 Strip 3 的行程还需要 River 2 上已有的桥
+        // with the new bridge on River 1, trips to Strip 3 still need an existing River 2 bridge
         if (!hasS3 || !br[2].empty())
             if (ans == -1 || tot[1][p] < ans)
                 ans = tot[1][p];

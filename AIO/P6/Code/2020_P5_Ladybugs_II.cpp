@@ -1,11 +1,11 @@
 // AIO 2020 P5 - Ladybugs II
-// 方法：最优方案一定是连续 K 只瓢虫（窗口）+ Binary Search（定位起点）+ Sparse Table（区间最小值）
+// Method: the best plan always takes K consecutive ladybugs (a window) + Binary Search (locate the start) + Sparse Table (range minimum)
 #include <bits/stdc++.h>
 using namespace std;
 
 int n, K, q;
 long long p[100010];
-long long f1[18][100010], f2[18][100010];   // Sparse Table：窗口 [l, l+K-1] 的两种代价（去掉 D 的部分）
+long long f1[18][100010], f2[18][100010];   // Sparse Table: the two costs of window [l, l+K-1] (without the D part)
 int lg[100010];
 
 long long qmin(long long f[][100010], int l, int r){
@@ -18,10 +18,10 @@ int main(){
     for (int i = 1; i <= n; i ++)
         cin >> p[i];
 
-    // 窗口 l（瓢虫 l .. l+K-1）跨过起点 D 时：
-    //   先往左再往右：(D - p[l]) + (p[r] - p[l]) = p[r] - 2p[l] + D
-    //   先往右再往左：(p[r] - D) + (p[r] - p[l]) = 2p[r] - p[l] - D
-    int w = n - K + 1;                      // 窗口个数
+    // when window l (ladybugs l .. l+K-1) straddles the start D:
+    //   left first, then right: (D - p[l]) + (p[r] - p[l]) = p[r] - 2p[l] + D
+    //   right first, then left: (p[r] - D) + (p[r] - p[l]) = 2p[r] - p[l] - D
+    int w = n - K + 1;                      // number of windows
     for (int l = 1; l <= w; l ++){
         f1[0][l] = p[l + K - 1] - 2 * p[l];
         f2[0][l] = 2 * p[l + K - 1] - p[l];
@@ -38,7 +38,7 @@ int main(){
         long long D;
         cin >> D;
 
-        // 二分：第一只位置 >= D 的瓢虫 s
+        // binary search: s = the first ladybug with position >= D
         int l = 1, r = n;
         while (l <= r){
             int mid = (l + r) / 2;
@@ -50,13 +50,13 @@ int main(){
         int s = l;
 
         long long ans = LLONG_MAX;
-        // 窗口全在 D 右边：最好从 s 开始，一直往右走
+        // window entirely right of D: best to start at s and keep walking right
         if (s <= w)
             ans = min(ans, p[s + K - 1] - D);
-        // 窗口全在 D 左边：最好以 s-1 结尾，一直往左走
+        // window entirely left of D: best to end at s-1 and keep walking left
         if (s - K >= 1)
             ans = min(ans, D - p[s - K]);
-        // 窗口跨过 D：l 在 [s-K+1, s-1] 里（还要是合法窗口）
+        // window straddles D: l is in [s-K+1, s-1] (and must be a valid window)
         int lo = max(1, s - K + 1), hi = min(s - 1, w);
         if (lo <= hi){
             ans = min(ans, qmin(f1, lo, hi) + D);

@@ -1,14 +1,14 @@
 // AIO 2019 P6 - Lollipops, Sweets and Chocolates II
-// 方法：Binary Search（二分 R）+ Two Pointers（统计每个房子的商店数）
+// Method: Binary Search (on R) + Two Pointers (count the shops for each house)
 #include <bits/stdc++.h>
 using namespace std;
 
 int n, m;
 long long L, sh[100010], ho[100010], s[100010], cnt[100010];
 
-// Two Pointers：半径为 R 时，每个房子能走到几个商店，返回总和
+// Two Pointers: with radius R, count how many shops each house can reach; return the sum
 long long total(long long R){
-    int lo = 1, hi = 1;     // 商店 [lo, hi) 在 [h-R, h+R] 里
+    int lo = 1, hi = 1;     // shops [lo, hi) are inside [h-R, h+R]
     long long sum = 0;
     for (int i = 1; i <= m; i ++){
         while (hi <= n && sh[hi] <= ho[i] + R)
@@ -34,13 +34,13 @@ int main(){
         S += s[i];
     }
 
-    // R = L 时总和仍不够 S，无解
+    // even R = L gives a sum below S: no answer
     if (total(L) < S){
         cout << -1 << endl;
         return 0;
     }
 
-    // 二分：找最小的 R，使总和 >= S
+    // binary search: the smallest R whose sum >= S
     long long l = 0, r = L;
     while (l <= r){
         long long mid = (l + r) / 2;
@@ -50,7 +50,7 @@ int main(){
             l = mid + 1;
     }
 
-    // 检查：排序后的计数是否和 s 完全一样
+    // check: do the sorted counts match s exactly?
     total(l);
     sort(cnt + 1, cnt + m + 1);
     for (int i = 1; i <= m; i ++)

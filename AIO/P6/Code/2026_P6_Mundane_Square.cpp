@@ -1,13 +1,13 @@
 // AIO 2026 P6 - Mundane Square
-// 方法：逐行 Greedy（优先给剩余需求最大的列）+ 二分水位线 lam（water-filling）
+// Method: row-by-row Greedy (serve the columns with the largest remaining demand first) + binary search on the water level lam (water-filling)
 #include <bits/stdc++.h>
 using namespace std;
 
 int n;
-long long K, R[1010], C[1010], rem[1010];   // rem[j]：第 j 列还缺多少
+long long K, R[1010], C[1010], rem[1010];   // rem[j]: how much column j still needs
 int a[1010][1010];
 
-// 水位线为 lam 时，这一行一共能发出多少：每列 min(K, max(0, rem[j] - lam))
+// with water level lam, how much this row hands out in total: min(K, max(0, rem[j] - lam)) per column
 long long give(long long lam){
     long long sum = 0;
     for (int j = 1; j <= n; j ++)
@@ -16,6 +16,11 @@ long long give(long long lam){
 }
 
 int main(){
+    // up to 10^6 numbers of output: turn off sync with stdio and untie cin from cout for faster I/O
+    // (once this is on, do not mix cin/cout with scanf/printf)
+    ios::sync_with_stdio(false);
+    cin.tie(0);
+
     long long sr = 0, sc = 0;
 
     cin >> n >> K;
@@ -29,20 +34,20 @@ int main(){
         rem[j] = C[j];
     }
 
-    // 行和总数必须等于列和总数
+    // the total of the row sums must equal the total of the column sums
     if (sr != sc){
         cout << "NO" << endl;
         return 0;
     }
 
     for (int i = 1; i <= n; i ++){
-        // a. 这一行的容量上限 give(0) 不够 R[i]，放不下
+        // a. this row's capacity give(0) is less than R[i]: it cannot fit
         if (give(0) < R[i]){
             cout << "NO" << endl;
             return 0;
         }
 
-        // b. 二分：最小的 lam，使 give(lam) <= R[i]
+        // b. binary search: the smallest lam with give(lam) <= R[i]
         long long l = 0, r = 0;
         for (int j = 1; j <= n; j ++)
             r = max(r, rem[j]);
@@ -54,9 +59,9 @@ int main(){
                 l = mid + 1;
         }
         long long lam = l;
-        long long left = R[i] - give(lam);     // 不足一层的零头
+        long long left = R[i] - give(lam);     // remainder smaller than one full level
 
-        // c. 按水位线分配；零头给恰好顶着水位线、还没到 K 的列
+        // c. allocate by the water level; the remainder goes to columns sitting exactly at the water level and still below K
         for (int j = 1; j <= n; j ++){
             long long v = min(K, max(0LL, rem[j] - lam));
             if (left > 0 && v < K && rem[j] - v == lam && lam > 0){
@@ -72,7 +77,7 @@ int main(){
         }
     }
 
-    // 每一列都必须刚好填满
+    // every column must be filled exactly
     for (int j = 1; j <= n; j ++)
         if (rem[j] != 0){
             cout << "NO" << endl;
@@ -83,7 +88,7 @@ int main(){
     for (int i = 1; i <= n; i ++){
         for (int j = 1; j <= n; j ++)
             cout << a[i][j] << " ";
-        cout << endl;
+        cout << "\n";             // use "\n" rather than endl: endl flushes the buffer every time
     }
     return 0;
 }

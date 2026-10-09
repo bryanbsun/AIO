@@ -1,6 +1,6 @@
 // AIO 2020 P6 - Beach Umbrellas
-// 方法：合并区间 + Greedy（从左往右放伞）+ Exchange Argument（候选左端点）
-//       + 按余数的线段树（求跳转）+ Binary Lifting（倍增：用 j 把伞能走多远）
+// Method: merge intervals + Greedy (place umbrellas left to right) + Exchange Argument (candidate left ends)
+//       + segment tree over remainders (to find jumps) + Binary Lifting (how far j umbrellas can reach)
 #include <bits/stdc++.h>
 using namespace std;
 
@@ -9,22 +9,22 @@ struct seg{
 }iv[100010];
 
 long long N, K, X;
-int U, m;                           // m：合并后的 block 个数
-long long st[100010], en[100010];   // 第 t 个 block 是 [st[t], en[t]]
+int U, m;                           // m: number of blocks after merging
+long long st[100010], en[100010];   // block t is [st[t], en[t]]
 
-// 结点 t (1..m)：block t 之后的空格起点 en[t]+1；结点 0：位置 1（如果没被覆盖）
-// 结点 E = m+1：表示已经到达海滩尽头 N
+// node t (1..m): the gap starting at en[t]+1, right after block t; node 0: position 1 (if not covered)
+// node E = m+1: the end of the beach N has been reached
 int E;
-long long pos[100010];              // 结点对应的位置，-1 表示没有这个结点
-int nxt[100010];                    // 从这个空格起点连续放伞，跳到哪个结点
-long long cst[100010];              // 这一跳用几把伞
-long long dist[100010];             // 从这个结点出发，到达 N 最少要几把伞
-int up[18][100010];                 // 倍增：跳 2^p 次到哪
-long long uc[18][100010];           // 倍增：跳 2^p 次一共用几把伞
+long long pos[100010];              // position of each node, -1 if the node does not exist
+int nxt[100010];                    // placing umbrellas back to back from this gap start, which node we jump to
+long long cst[100010];              // umbrellas used by this jump
+long long dist[100010];             // fewest umbrellas needed to reach N from this node
+int up[18][100010];                 // binary lifting: where 2^p jumps lead
+long long uc[18][100010];           // binary lifting: total umbrellas used by 2^p jumps
 
-long long rs[100010];               // 所有空格起点 mod X 的值（排序去重）
+long long rs[100010];               // all gap starts mod X (sorted, duplicates removed)
 int nr;
-int tr[400010];                     // 线段树：每个余数上最小的 block 编号
+int tr[400010];                     // segment tree: the smallest block index on each remainder
 
 bool cmp(seg p, seg q){
     if (p.a != q.a)
@@ -32,7 +32,7 @@ bool cmp(seg p, seg q){
     return p.b < q.b;
 }
 
-// rs 中第一个 >= v 的下标
+// index of the first value >= v in rs
 int firstGE(long long v){
     int l = 1, r = nr;
     while (l <= r){
@@ -45,7 +45,7 @@ int firstGE(long long v){
     return l;
 }
 
-// rs 中最后一个 <= v 的下标
+// index of the last value <= v in rs
 int lastLE(long long v){
     int l = 1, r = nr;
     while (l <= r){
@@ -58,7 +58,7 @@ int lastLE(long long v){
     return r;
 }
 
-// 线段树：区间 [ql, qr] 对 v 取 min
+// segment tree: range [ql, qr] takes min with v
 void update(int k, int l, int r, int ql, int qr, int v){
     if (qr < l || r < ql)
         return;
@@ -71,7 +71,7 @@ void update(int k, int l, int r, int ql, int qr, int v){
     update(2 * k + 1, mid + 1, r, ql, qr, v);
 }
 
-// 线段树：单点查询（从根到叶子路径上的最小值）
+// segment tree: point query (minimum along the root-to-leaf path)
 int query(int k, int l, int r, int p){
     if (l == r)
         return tr[k];
@@ -81,14 +81,14 @@ int query(int k, int l, int r, int p){
     return min(tr[k], query(2 * k + 1, mid + 1, r, p));
 }
 
-// 在余数区间 [lo, hi] 上标记 block t
+// mark block t on the remainder range [lo, hi]
 void paint(long long lo, long long hi, int t){
     int a = firstGE(lo), b = lastLE(hi);
     if (a <= b)
         update(1, 1, nr, a, b, t);
 }
 
-// block t 覆盖的所有位置 mod X，是一段"弧"
+// all positions covered by block t, taken mod X, form one "arc"
 void paintBlock(int t){
     if (en[t] - st[t] + 1 >= X){
         paint(0, X - 1, t);
@@ -103,12 +103,12 @@ void paintBlock(int t){
     }
 }
 
-// 从空格起点 a = pos[t] 出发，伞放在 a, a+X, a+2X, ...
-// 右边第一个包含与 a 同余位置的 block，就是第一次"落进 block"的地方
+// starting from gap start a = pos[t], umbrellas go at a, a+X, a+2X, ...
+// the first block to the right containing a position congruent to a (mod X) is where we first "land in a block"
 void jump(int t){
     long long a = pos[t];
     int h = query(1, 1, nr, firstGE(a % X));
-    if (h == INT_MAX){                  // 一直到海滩尽头都没落进 block
+    if (h == INT_MAX){                  // never lands in a block before the end of the beach
         nxt[t] = E;
         cst[t] = (N - a + X) / X;       // ceil((N - a + 1) / X)
     }else{
@@ -120,26 +120,26 @@ void jump(int t){
     }
 }
 
-// 从结点 t 出发、用 j 把伞（已知到不了 N），能覆盖到的最右位置
+// the rightmost position covered starting from node t with j umbrellas (known not to reach N)
 long long runEnd(int t, long long j){
     for (int p = 17; p >= 0; p --)
         if (up[p][t] != E && uc[p][t] <= j){
             j -= uc[p][t];
             t = up[p][t];
         }
-    return pos[t] + j * X - 1;          // 剩下的 j 把在这个空格里连着放
+    return pos[t] + j * X - 1;          // the remaining j umbrellas go back to back in this gap
 }
 
-// 左边从 ls（block 起点或位置 1）开始、右边从结点 t 出发时，最长能覆盖多少
+// the longest coverage when the left side starts at ls (a block start or position 1) and the right side starts from node t
 long long value(long long ls, int t){
     long long need = (t == E) ? 0 : dist[t];
-    if (need > K)                                   // 到不了 N：全放右边
+    if (need > K)                                   // cannot reach N: put them all on the right
         return runEnd(t, K) - ls + 1;
 
-    // 方案 A：右边刚好用 need 把到 N，剩下的全放左边
+    // option A: use exactly need umbrellas on the right to reach N, put the rest on the left
     long long left = K - need;
     long long best = N - max(1LL, ls - left * X) + 1;
-    // 方案 B：右边少用 1 把（最后一把可能被 N 截断），左边多放 1 把
+    // option B: use 1 fewer on the right (the last one may be cut off at N), 1 more on the left
     if (need >= 1){
         long long r = runEnd(t, need - 1);
         best = max(best, r - max(1LL, ls - (left + 1) * X) + 1);
@@ -153,7 +153,7 @@ int main(){
         cin >> iv[i].a >> iv[i].b;
     sort(iv + 1, iv + U + 1, cmp);
 
-    // 1) 合并区间（重叠或相邻都合并）
+    // 1) merge intervals (overlapping or adjacent ones are merged)
     for (int i = 1; i <= U; i ++){
         if (m > 0 && iv[i].a <= en[m] + 1)
             en[m] = max(en[m], iv[i].b);
@@ -164,7 +164,7 @@ int main(){
         }
     }
 
-    // 2) 结点
+    // 2) nodes
     E = m + 1;
     for (int t = 0; t <= E; t ++){
         pos[t] = -1;
@@ -176,11 +176,11 @@ int main(){
     if (st[1] > 1)
         pos[0] = 1;
 
-    // 3) 空格起点的余数，排序去重
+    // 3) remainders of the gap starts, sorted with duplicates removed
     for (int t = 0; t <= m; t ++)
         if (pos[t] >= 0)
             rs[++ nr] = pos[t] % X;
-    if (nr == 0){                       // 没有空格：整片海滩都盖住了
+    if (nr == 0){                       // no gaps: the whole beach is already covered
         cout << N << endl;
         return 0;
     }
@@ -192,7 +192,7 @@ int main(){
     nr = k;
     fill(tr, tr + 4 * nr + 4, INT_MAX);
 
-    // 4) 从右往左：先算空格起点的跳转，再把 block t 画进线段树
+    // 4) right to left: first compute the jump from the gap start, then paint block t into the segment tree
     for (int t = m; t >= 1; t --){
         if (pos[t] >= 0)
             jump(t);
@@ -201,14 +201,14 @@ int main(){
     if (pos[0] >= 0)
         jump(0);
 
-    // 5) dist：到达 N 最少几把伞（跳转只往右，从右往左算）
+    // 5) dist: fewest umbrellas to reach N (jumps only go right, so compute right to left)
     for (int t = m; t >= 1; t --)
         if (pos[t] >= 0)
             dist[t] = cst[t] + (nxt[t] == E ? 0 : dist[nxt[t]]);
     if (pos[0] >= 0)
         dist[0] = cst[0] + (nxt[0] == E ? 0 : dist[nxt[0]]);
 
-    // 6) 倍增表
+    // 6) binary lifting table
     for (int t = 0; t <= E; t ++){
         up[0][t] = E;
         uc[0][t] = 0;
@@ -223,7 +223,7 @@ int main(){
             uc[p][t] = min(4000000000000000000LL, uc[p-1][t] + uc[p-1][up[p-1][t]]);
         }
 
-    // 7) 枚举候选左端：每个 block 的起点，以及位置 1
+    // 7) try every candidate left end: each block start, plus position 1
     long long ans = 0;
     for (int t = 1; t <= m; t ++)
         ans = max(ans, value(st[t], en[t] == N ? E : t));
